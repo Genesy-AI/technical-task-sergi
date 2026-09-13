@@ -68,7 +68,11 @@ const apiMutationsOptions = (queryClient: QueryClient) =>
             jobTitle: null,
             countryCode: null,
             companyName: null,
+            phoneNumber: null,
+            yearsAtCurrentCo: null,
+            linkedinUrl: null,
             message: null,
+            emailVerified: null,
             ...input,
           }
           const newLeads: ApiOutput<typeof api.leads.getMany> = [...(previousValue ?? []), newLead]

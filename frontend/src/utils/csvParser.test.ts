@@ -142,6 +142,50 @@ John,Doe,john@example.com,Developer,US,Tech Corp`
     expect(result[0].jobTitle).toBe('Developer')
   })
 
+  it('should parse populated new optional fields', () => {
+    const csv = `firstName,lastName,email,phoneNumber,yearsAtCurrentCo,linkedinUrl
+John,Doe,john@example.com,+1 (555) 0100,3.5,https://linkedin.com/in/johndoe`
+
+    const result = parseCsv(csv)
+
+    expect(result[0].phoneNumber).toBe('+1 (555) 0100')
+    expect(result[0].yearsAtCurrentCo).toBe('3.5')
+    expect(result[0].linkedinUrl).toBe('https://linkedin.com/in/johndoe')
+  })
+
+  it('should convert empty new optional fields to undefined', () => {
+    const csv = `firstName,lastName,email,phoneNumber,yearsAtCurrentCo,linkedinUrl
+John,Doe,john@example.com,,,`
+
+    const result = parseCsv(csv)
+
+    expect(result[0].phoneNumber).toBeUndefined()
+    expect(result[0].yearsAtCurrentCo).toBeUndefined()
+    expect(result[0].linkedinUrl).toBeUndefined()
+  })
+
+  it('should trim new optional fields', () => {
+    const csv = `firstName,lastName,email,phoneNumber,yearsAtCurrentCo,linkedinUrl
+John,Doe,john@example.com, +1 555 0100 , 0 , https://linkedin.com/in/johndoe `
+
+    const result = parseCsv(csv)
+
+    expect(result[0].phoneNumber).toBe('+1 555 0100')
+    expect(result[0].yearsAtCurrentCo).toBe('0')
+    expect(result[0].linkedinUrl).toBe('https://linkedin.com/in/johndoe')
+  })
+
+  it('should map normalized new optional field headers', () => {
+    const csv = `firstName,lastName,email,PHONE NUMBER,Years_At_Current_Co,LinkedIn URL
+John,Doe,john@example.com,555-0100,2,linkedin.com/in/johndoe`
+
+    const result = parseCsv(csv)
+
+    expect(result[0].phoneNumber).toBe('555-0100')
+    expect(result[0].yearsAtCurrentCo).toBe('2')
+    expect(result[0].linkedinUrl).toBe('linkedin.com/in/johndoe')
+  })
+
   it('should handle missing optional fields', () => {
     const csv = `firstName,lastName,email,jobTitle,countryCode
 John,Doe,john@example.com,,`
