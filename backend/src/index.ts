@@ -313,11 +313,15 @@ app.post('/leads/verify-emails', async (req: Request, res: Response) => {
   }
 })
 
-app.listen(4000, () => {
-  console.log('Express server is running on port 4000')
-})
+export { app }
 
-runTemporalWorker().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+if (require.main === module) {
+  app.listen(4000, () => {
+    console.log('Express server is running on port 4000')
+  })
+
+  runTemporalWorker().catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
+}
