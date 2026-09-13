@@ -1,11 +1,12 @@
 import Papa from 'papaparse'
+import { validateCountryCode } from './countryCodes'
 
 export interface CsvLead {
   firstName: string
   lastName: string
   email: string
   jobTitle?: string
-  countryCode?: string
+  countryCode: string
   companyName?: string
   isValid: boolean
   errors: string[]
@@ -68,7 +69,7 @@ export const parseCsv = (content: string): CsvLead[] => {
           lead.jobTitle = trimmedValue || undefined
           break
         case 'countrycode':
-          lead.countryCode = trimmedValue || undefined
+          lead.countryCode = trimmedValue
           break
         case 'companyname':
           lead.companyName = trimmedValue || undefined
@@ -76,25 +77,29 @@ export const parseCsv = (content: string): CsvLead[] => {
       }
     })
 
-    const errors: string[] = []
+    const blockingErrors: string[] = []
     if (!lead.firstName?.trim()) {
-      errors.push('First name is required')
+      blockingErrors.push('First name is required')
     }
     if (!lead.lastName?.trim()) {
-      errors.push('Last name is required')
+      blockingErrors.push('Last name is required')
     }
     if (!lead.email?.trim()) {
-      errors.push('Email is required')
+      blockingErrors.push('Email is required')
     } else if (!isValidEmail(lead.email)) {
-      errors.push('Invalid email format')
+      blockingErrors.push('Invalid email format')
     }
+
+    const country = validateCountryCode(lead.countryCode)
+    const errors = country.isUnsupported ? [...blockingErrors, 'Invalid country code'] : blockingErrors
 
     data.push({
       ...lead,
       firstName: lead.firstName || '',
       lastName: lead.lastName || '',
       email: lead.email || '',
-      isValid: errors.length === 0,
+      countryCode: country.countryCode,
+      isValid: blockingErrors.length === 0,
       errors,
     } as CsvLead)
   })

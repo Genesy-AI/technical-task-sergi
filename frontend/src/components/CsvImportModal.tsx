@@ -3,12 +3,26 @@ import { createPortal } from 'react-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { api } from '../api'
+import { LeadsBulkImportInput } from '../api/types/leads/bulkImport'
 import { CsvLead, parseCsv } from '../utils/csvParser'
 
 interface CsvImportModalProps {
   isOpen: boolean
   onClose: () => void
 }
+
+export const mapCsvLeadsToBulkImportInput = (leads: CsvLead[]): LeadsBulkImportInput => ({
+  leads: leads
+    .filter((lead) => lead.isValid)
+    .map((lead) => ({
+      firstName: lead.firstName,
+      lastName: lead.lastName,
+      email: lead.email,
+      jobTitle: lead.jobTitle || undefined,
+      countryCode: lead.countryCode,
+      companyName: lead.companyName || undefined,
+    })),
+})
 
 export const CsvImportModal: FC<CsvImportModalProps> = ({ isOpen, onClose }) => {
   const [csvData, setCsvData] = useState<CsvLead[]>([])
@@ -90,20 +104,7 @@ export const CsvImportModal: FC<CsvImportModalProps> = ({ isOpen, onClose }) => 
   }, [])
 
   const importMutation = useMutation({
-    mutationFn: async (leads: CsvLead[]) => {
-      const validLeads = leads.filter((lead) => lead.isValid)
-
-      const leadsToImport = validLeads.map((lead) => ({
-        firstName: lead.firstName,
-        lastName: lead.lastName,
-        email: lead.email,
-        jobTitle: lead.jobTitle || undefined,
-        countryCode: lead.countryCode || undefined,
-        companyName: lead.companyName || undefined,
-      }))
-
-      return api.leads.bulkImport({ leads: leadsToImport })
-    },
+    mutationFn: async (leads: CsvLead[]) => api.leads.bulkImport(mapCsvLeadsToBulkImportInput(leads)),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['leads', 'getMany'] })
 
