@@ -9,6 +9,9 @@ describe('generateMessageFromTemplate', () => {
     jobTitle: 'Software Engineer',
     companyName: 'Tech Corp',
     countryCode: 'US',
+    phoneNumber: '+1 (555) 0100',
+    yearsAtCurrentCo: '3.5',
+    linkedinUrl: 'https://linkedin.com/in/johndoe',
   }
 
   const partialLead: Lead = {
@@ -45,10 +48,18 @@ describe('generateMessageFromTemplate', () => {
 
     it('should handle template with all available fields', () => {
       const template =
-        'Name: {firstName} {lastName}, Email: {email}, Job: {jobTitle} at {companyName}, Country: {countryCode}'
+        'Name: {firstName} {lastName}, Email: {email}, Job: {jobTitle} at {companyName}, Country: {countryCode}, Phone: {phoneNumber}, Years: {yearsAtCurrentCo}, LinkedIn: {linkedinUrl}'
       const result = generateMessageFromTemplate(template, fullLead)
       expect(result).toBe(
-        'Name: John Doe, Email: john.doe@example.com, Job: Software Engineer at Tech Corp, Country: US'
+        'Name: John Doe, Email: john.doe@example.com, Job: Software Engineer at Tech Corp, Country: US, Phone: +1 (555) 0100, Years: 3.5, LinkedIn: https://linkedin.com/in/johndoe'
+      )
+    })
+
+    it('should replace new fields repeatedly', () => {
+      const template = '{phoneNumber} / {phoneNumber}; {yearsAtCurrentCo} / {yearsAtCurrentCo}; {linkedinUrl} / {linkedinUrl}'
+      const result = generateMessageFromTemplate(template, fullLead)
+      expect(result).toBe(
+        '+1 (555) 0100 / +1 (555) 0100; 3.5 / 3.5; https://linkedin.com/in/johndoe / https://linkedin.com/in/johndoe'
       )
     })
 
@@ -100,6 +111,17 @@ describe('generateMessageFromTemplate', () => {
       const template = 'Hello {firstName}, your last name is {lastName}'
       expect(() => generateMessageFromTemplate(template, minimalLead)).toThrow(
         'Missing required field: lastName'
+      )
+    })
+
+    it.each([
+      ['phoneNumber', null],
+      ['yearsAtCurrentCo', undefined],
+      ['linkedinUrl', ''],
+    ])('should throw error when new field %s is missing', (fieldName, fieldValue) => {
+      const lead = { ...fullLead, [fieldName]: fieldValue }
+      expect(() => generateMessageFromTemplate(`Value: {${fieldName}}`, lead)).toThrow(
+        `Missing required field: ${fieldName}`
       )
     })
   })

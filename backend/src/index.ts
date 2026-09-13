@@ -229,6 +229,14 @@ app.post('/leads/bulk', async (req: Request, res: Response) => {
             jobTitle: lead.jobTitle ? lead.jobTitle.trim() : null,
             countryCode: lead.countryCode ? lead.countryCode.trim() : null,
             companyName: lead.companyName ? lead.companyName.trim() : null,
+            phoneNumber:
+              typeof lead.phoneNumber === 'string' && lead.phoneNumber.trim() ? lead.phoneNumber.trim() : null,
+            yearsAtCurrentCo:
+              typeof lead.yearsAtCurrentCo === 'string' && lead.yearsAtCurrentCo.trim()
+                ? lead.yearsAtCurrentCo.trim()
+                : null,
+            linkedinUrl:
+              typeof lead.linkedinUrl === 'string' && lead.linkedinUrl.trim() ? lead.linkedinUrl.trim() : null,
           },
         })
         importedCount++
