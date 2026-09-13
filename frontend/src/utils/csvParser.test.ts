@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseCsv, isValidEmail } from './csvParser'
+import { SUPPORTED_COUNTRY_CODES } from './countryCodes'
 
 describe('isValidEmail', () => {
   it('should return true for valid email addresses', () => {
@@ -150,8 +151,50 @@ John,Doe,john@example.com,,`
 
     expect(result).toHaveLength(1)
     expect(result[0].jobTitle).toBeUndefined()
-    expect(result[0].countryCode).toBeUndefined()
+    expect(result[0].countryCode).toBe('')
     expect(result[0].isValid).toBe(true)
+  })
+
+  it.each([...SUPPORTED_COUNTRY_CODES])('accepts supported country code %s', (countryCode) => {
+    const result = parseCsv(`firstName,lastName,email,countryCode\nJohn,Doe,john@example.com,${countryCode}`)
+
+    expect(result[0]).toMatchObject({ countryCode, isValid: true, errors: [] })
+  })
+
+  it('trims supported country codes without changing case', () => {
+    const result = parseCsv('firstName,lastName,email,countryCode\nJohn,Doe,john@example.com, US ')
+
+    expect(result[0]).toMatchObject({ countryCode: 'US', isValid: true, errors: [] })
+  })
+
+  it.each(['XXX', ' XXX ', '12', 'ZZ', 'us', 'Us', 'uS', ' USx '])(
+    'marks unsupported country code %s as non-blocking error',
+    (countryCode) => {
+      const result = parseCsv(
+        `firstName,lastName,email,countryCode\nJohn,Doe,john@example.com,${countryCode}`
+      )
+
+      expect(result[0]).toMatchObject({ countryCode: '', isValid: true, errors: ['Invalid country code'] })
+    }
+  )
+
+  it('stores blank and missing country codes as empty strings without errors', () => {
+    const blank = parseCsv('firstName,lastName,email,countryCode\nJohn,Doe,john@example.com,   ')
+    const missing = parseCsv('firstName,lastName,email\nJane,Doe,jane@example.com')
+
+    expect(blank[0]).toMatchObject({ countryCode: '', isValid: true, errors: [] })
+    expect(missing[0]).toMatchObject({ countryCode: '', isValid: true, errors: [] })
+  })
+
+  it('keeps country error alongside blocking required-field errors', () => {
+    const result = parseCsv('firstName,lastName,email,countryCode\n,Doe,invalid-email,XXX')
+
+    expect(result[0]).toMatchObject({ countryCode: '', isValid: false })
+    expect(result[0].errors).toEqual([
+      'First name is required',
+      'Invalid email format',
+      'Invalid country code',
+    ])
   })
 
   it('should preserve row index correctly', () => {

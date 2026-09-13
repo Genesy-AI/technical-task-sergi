@@ -4,6 +4,7 @@ import { Connection, Client } from '@temporalio/client'
 import { verifyEmailWorkflow } from './workflows'
 import { generateMessageFromTemplate } from './utils/messageGenerator'
 import { runTemporalWorker } from './worker'
+import { importBulkLeads } from './utils/bulkLeadImport'
 const prisma = new PrismaClient()
 const app = express()
 app.use(express.json())
@@ -179,73 +180,20 @@ app.post('/leads/bulk', async (req: Request, res: Response) => {
   }
 
   try {
-    const validLeads = leads.filter((lead) => {
-      return (
-        lead.firstName &&
-        lead.lastName &&
-        lead.email &&
-        typeof lead.firstName === 'string' &&
-        lead.firstName.trim() &&
-        typeof lead.lastName === 'string' &&
-        lead.lastName.trim() &&
-        typeof lead.email === 'string' &&
-        lead.email.trim()
-      )
-    })
+    const result = await importBulkLeads(prisma, leads)
 
-    if (validLeads.length === 0) {
+    if (result.validLeadCount === 0) {
       return res
         .status(400)
         .json({ error: 'No valid leads found. firstName, lastName, and email are required.' })
     }
 
-    const existingLeads = await prisma.lead.findMany({
-      where: {
-        OR: validLeads.map((lead) => ({
-          AND: [{ firstName: lead.firstName.trim() }, { lastName: lead.lastName.trim() }],
-        })),
-      },
-    })
-
-    const leadKeys = new Set(
-      existingLeads.map((lead) => `${lead.firstName.toLowerCase()}_${(lead.lastName || '').toLowerCase()}`)
-    )
-
-    const uniqueLeads = validLeads.filter((lead) => {
-      const key = `${lead.firstName.toLowerCase()}_${lead.lastName.toLowerCase()}`
-      return !leadKeys.has(key)
-    })
-
-    let importedCount = 0
-    const errors: Array<{ lead: any; error: string }> = []
-
-    for (const lead of uniqueLeads) {
-      try {
-        await prisma.lead.create({
-          data: {
-            firstName: lead.firstName.trim(),
-            lastName: lead.lastName.trim(),
-            email: lead.email.trim(),
-            jobTitle: lead.jobTitle ? lead.jobTitle.trim() : null,
-            countryCode: lead.countryCode ? lead.countryCode.trim() : null,
-            companyName: lead.companyName ? lead.companyName.trim() : null,
-          },
-        })
-        importedCount++
-      } catch (error) {
-        errors.push({
-          lead: lead,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
-      }
-    }
-
     res.json({
       success: true,
-      importedCount,
-      duplicatesSkipped: validLeads.length - uniqueLeads.length,
-      invalidLeads: leads.length - validLeads.length,
-      errors,
+      importedCount: result.importedCount,
+      duplicatesSkipped: result.duplicatesSkipped,
+      invalidLeads: result.invalidLeads,
+      errors: result.errors,
     })
   } catch (error) {
     console.error('Error importing leads:', error)
